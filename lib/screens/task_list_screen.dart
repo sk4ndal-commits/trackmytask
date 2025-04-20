@@ -16,7 +16,6 @@ class TaskListScreen extends StatelessWidget {
       body: Consumer<TaskService>(
         builder: (context, taskService, child) {
           final tasks = taskService.tasks;
-          final isTracking = taskService.isTracking;
           final activeTaskId = taskService.activeTask?.id;
 
           if (tasks.isEmpty) {

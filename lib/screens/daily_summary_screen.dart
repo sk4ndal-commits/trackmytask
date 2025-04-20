@@ -36,20 +36,22 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                   await Provider.of<TaskService>(context, listen: false)
                       .getDailySummary(_selectedDate);
 
-              if (summaryData['taskSummary'].isEmpty) {
+              if (summaryData['taskSummary'].isEmpty && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('No data to export')),
                 );
                 return;
               }
 
-              if (value == 'csv') {
-                await _showPathInputDialog(
-                  context,
-                  'Export Summary as CSV',
-                  'csv',
-                  (filePath) => _exportToCsv(summaryData, filePath),
-                );
+              if (context.mounted) {
+                if (value == 'csv') {
+                  await _showPathInputDialog(
+                    context,
+                    'Export Summary as CSV',
+                    'csv',
+                    (filePath) => _exportToCsv(summaryData, filePath),
+                  );
+                }
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -388,14 +390,18 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
       await file.writeAsString(const ListToCsvConverter().convert(csvData));
 
       // Notify user of success
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Exported to $filePath')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported to $filePath')),
+        );
+      }
     } catch (e) {
       // Notify user of failure
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to export CSV: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export CSV: $e')),
+        );
+      }
     }
   }
 }
