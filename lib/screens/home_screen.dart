@@ -334,7 +334,7 @@ class HomeScreen extends StatelessWidget {
         taskIdToLastStartTime[b.id]!.compareTo(taskIdToLastStartTime[a.id]!));
 
     // Take the top 3 recent tasks
-    final topRecentTasks = recentTasks.take(3).toList();
+    final topRecentTasks = recentTasks.take(5).toList();
 
     // Build the UI
     return Column(
