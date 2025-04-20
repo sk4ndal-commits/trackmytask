@@ -78,17 +78,6 @@ class HomeScreen extends StatelessWidget {
                   Expanded(
                     child: _buildScrollableRecentTasks(context, taskService),
                   ),
-
-                // App info
-                Center(
-                  child: Text(
-                    'Track My Tasks - Your Desktop Time Tracking Assistant',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
               ],
             ),
           );
