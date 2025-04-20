@@ -7,6 +7,7 @@ class TimeEntry {
   final DateTime? endTime;
   final Task? task; // Optional reference to the associated task
   final String? taskName; // Store the task name directly
+  final String? workLocation; // 'home' or 'office'
 
   TimeEntry({
     this.id,
@@ -15,6 +16,7 @@ class TimeEntry {
     this.endTime,
     this.task,
     this.taskName,
+    this.workLocation,
   });
 
   // Calculate the duration of this time entry
@@ -44,6 +46,7 @@ class TimeEntry {
       endTime: map['endTime'] != null ? DateTime.parse(map['endTime']) : null,
       task: task,
       taskName: map['taskName'],
+      workLocation: map['workLocation'],
     );
   }
 
@@ -61,6 +64,11 @@ class TimeEntry {
       map['taskName'] = taskName;
     }
 
+    // Include workLocation if it's not null
+    if (workLocation != null) {
+      map['workLocation'] = workLocation;
+    }
+
     return map;
   }
 
@@ -72,6 +80,7 @@ class TimeEntry {
     DateTime? endTime,
     Task? task,
     String? taskName,
+    String? workLocation,
   }) {
     return TimeEntry(
       id: id ?? this.id,
@@ -80,6 +89,7 @@ class TimeEntry {
       endTime: endTime ?? this.endTime,
       task: task ?? this.task,
       taskName: taskName ?? this.taskName,
+      workLocation: workLocation ?? this.workLocation,
     );
   }
 

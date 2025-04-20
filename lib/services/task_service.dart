@@ -108,7 +108,7 @@ class TaskService extends ChangeNotifier {
   }
 
   // Start tracking time for a task
-  Future<void> startTracking(Task task) async {
+  Future<void> startTracking(Task task, {String? workLocation}) async {
     // Stop any active tracking first
     if (_activeTimeEntry != null) {
       await stopTracking();
@@ -124,6 +124,7 @@ class TaskService extends ChangeNotifier {
       startTime: DateTime.now(),
       task: updatedTask,
       taskName: updatedTask.name, // Store the task name directly
+      workLocation: workLocation, // Store the work location
     );
 
     final id = await _db.insertTimeEntry(timeEntry);
@@ -183,6 +184,39 @@ class TaskService extends ChangeNotifier {
       }
     }
 
+    // Group entries by work location
+    final locationSummary = <String, Duration>{};
+    for (final entry in entries) {
+      final location = entry.workLocation ?? 'unknown';
+      final duration = entry.duration;
+
+      if (locationSummary.containsKey(location)) {
+        locationSummary[location] = locationSummary[location]! + duration;
+      } else {
+        locationSummary[location] = duration;
+      }
+    }
+
+    // Group entries by task and then by location
+    final taskLocationSummary = <int, Map<String, Duration>>{};
+    for (final entry in entries) {
+      final taskId = entry.taskId;
+      final location = entry.workLocation ?? 'unknown';
+      final duration = entry.duration;
+
+      // Initialize task map if it doesn't exist
+      if (!taskLocationSummary.containsKey(taskId)) {
+        taskLocationSummary[taskId] = {};
+      }
+
+      // Initialize or update location duration for this task
+      if (taskLocationSummary[taskId]!.containsKey(location)) {
+        taskLocationSummary[taskId]![location] = taskLocationSummary[taskId]![location]! + duration;
+      } else {
+        taskLocationSummary[taskId]![location] = duration;
+      }
+    }
+
     // Get task names
     final taskNames = <int, String>{};
 
@@ -211,6 +245,8 @@ class TaskService extends ChangeNotifier {
       'taskSummary': taskSummary,
       'taskNames': taskNames,
       'totalDuration': totalDuration,
+      'locationSummary': locationSummary,
+      'taskLocationSummary': taskLocationSummary,
     };
   }
 }

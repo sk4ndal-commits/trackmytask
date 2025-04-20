@@ -177,12 +177,63 @@ class HomeScreen extends StatelessWidget {
                       task.description != null ? Text(task.description!) : null,
                   onTap: () {
                     Navigator.pop(context);
-                    Provider.of<TaskService>(context, listen: false)
-                        .startTracking(task);
+                    _showWorkLocationDialog(context, task);
                   },
                 );
               },
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showWorkLocationDialog(BuildContext context, Task task) {
+    String? selectedLocation;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Work Location'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Where are you working from?'),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Home'),
+                leading: Radio<String>(
+                  value: 'home',
+                  groupValue: selectedLocation,
+                  onChanged: (value) {
+                    selectedLocation = value;
+                    Navigator.pop(context);
+                    Provider.of<TaskService>(context, listen: false)
+                        .startTracking(task, workLocation: 'home');
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Office'),
+                leading: Radio<String>(
+                  value: 'office',
+                  groupValue: selectedLocation,
+                  onChanged: (value) {
+                    selectedLocation = value;
+                    Navigator.pop(context);
+                    Provider.of<TaskService>(context, listen: false)
+                        .startTracking(task, workLocation: 'office');
+                  },
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -322,10 +373,10 @@ class HomeScreen extends StatelessWidget {
             : null,
         trailing: IconButton(
           icon: const Icon(Icons.play_arrow),
-          onPressed: () => taskService.startTracking(task),
+          onPressed: () => _showWorkLocationDialog(context, task),
           tooltip: 'Start tracking',
         ),
-        onTap: () => taskService.startTracking(task),
+        onTap: () => _showWorkLocationDialog(context, task),
       ),
     );
   }

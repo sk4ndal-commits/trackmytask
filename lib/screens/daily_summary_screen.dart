@@ -7,6 +7,13 @@ import 'package:provider/provider.dart';
 import 'package:trackmytasks/models/time_entry.dart';
 import 'package:trackmytasks/services/task_service.dart';
 
+// Extension to capitalize the first letter of a string
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+}
+
 class DailySummaryScreen extends StatefulWidget {
   const DailySummaryScreen({super.key});
 
@@ -198,7 +205,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Task summary list
+                              // Task summary list with location breakdown
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -218,21 +225,82 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                                       taskNames[taskId] ??
                                       'Unknown Task';
 
+                                  // Get location breakdown for this task
+                                  final taskLocationMap = 
+                                      summaryData['taskLocationSummary'][taskId] as Map<String, Duration>;
+
                                   return Card(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    child: ListTile(
-                                      leading: Icon(Icons.task_alt,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .secondary),
-                                      title: Text(taskName),
-                                      trailing: Text(
-                                        _formatDuration(duration),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    child: Column(
+                                      children: [
+                                        // Main task row
+                                        ListTile(
+                                          leading: Icon(Icons.task_alt,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary),
+                                          title: Text(taskName),
+                                          trailing: Text(
+                                            _formatDuration(duration),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+
+                                        // Location breakdown
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 16.0, 
+                                            right: 16.0, 
+                                            bottom: 8.0
+                                          ),
+                                          child: Column(
+                                            children: taskLocationMap.entries.map((locationEntry) {
+                                              final location = locationEntry.key;
+                                              final locationDuration = locationEntry.value;
+
+                                              // Format location name for display
+                                              String displayLocation;
+                                              IconData locationIcon;
+
+                                              if (location == 'home') {
+                                                displayLocation = 'Home';
+                                                locationIcon = Icons.home;
+                                              } else if (location == 'office') {
+                                                displayLocation = 'Office';
+                                                locationIcon = Icons.business;
+                                              } else {
+                                                displayLocation = 'Unknown Location';
+                                                locationIcon = Icons.question_mark;
+                                              }
+
+                                              return Padding(
+                                                padding: const EdgeInsets.only(top: 4.0),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(locationIcon, 
+                                                      size: 16, 
+                                                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.7)
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(displayLocation),
+                                                    const Spacer(),
+                                                    Text(
+                                                      _formatDuration(locationDuration),
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w500,
+                                                        color: Theme.of(context).colorScheme.secondary,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
@@ -259,18 +327,42 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                                       taskNames[entry.taskId] ??
                                       'Unknown Task';
 
+                                  // Get location icon
+                                  IconData locationIcon;
+
+                                  if (entry.workLocation == 'home') {
+                                    locationIcon = Icons.home;
+                                  } else if (entry.workLocation == 'office') {
+                                    locationIcon = Icons.business;
+                                  } else {
+                                    locationIcon = Icons.location_on;
+                                  }
+
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     child: ListTile(
                                       title: Text(taskName),
-                                      subtitle: Text(
-                                        '${_formatTime(entry.startTime)} - ${entry.endTime != null ? _formatTime(entry.endTime!) : 'In progress'}',
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${_formatTime(entry.startTime)} - ${entry.endTime != null ? _formatTime(entry.endTime!) : 'In progress'}',
+                                          ),
+                                          Row(
+                                            children: [
+                                              Icon(locationIcon, size: 16),
+                                              const SizedBox(width: 4),
+                                              Text(entry.workLocation?.capitalize() ?? 'Unknown location'),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                       trailing: Text(
                                         entry.formattedDuration,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
                                       ),
+                                      isThreeLine: true,
                                     ),
                                   );
                                 },
@@ -365,24 +457,117 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
       final taskSummary = summaryData['taskSummary'] as Map<int, Duration>;
       final taskNames = summaryData['taskNames'] as Map<int, String>;
       final entries = summaryData['entries'] as List<TimeEntry>;
+      final locationSummary = summaryData['locationSummary'] as Map<String, Duration>;
 
       // Prepare data for CSV
       final List<List<dynamic>> csvData = [
-        ['Date', 'Task', 'Duration (HH:MM:SS)'] // Header row
+        ['Date', 'Task', 'Location', 'Duration (HH:MM:SS)', 'Time Homeoffice', 'Time Office'] // Header row
       ];
 
-      // Add each task with its date, name, and duration
-      taskSummary.forEach((taskId, duration) {
-        // Get the date of the task from the corresponding time entry
-        final entry = entries.firstWhere(
-          (e) => e.taskId == taskId,
-          orElse: () => TimeEntry(taskId: taskId, startTime: _selectedDate),
-        );
-        final taskDate =
-            DateFormat.yMMMd().format(entry.startTime); // Extract date
-        final taskName = taskNames[taskId] ?? 'Unknown Task';
+      // Add each task with its date, name, location, and duration
+      for (final entry in entries) {
+        final taskDate = DateFormat.yMMMd().format(entry.startTime);
+        final taskName = entry.task?.name ?? 
+                         entry.taskName ?? 
+                         taskNames[entry.taskId] ?? 
+                         'Unknown Task';
+        final location = entry.workLocation?.capitalize() ?? 'Unknown';
 
-        csvData.add([taskDate, taskName, _formatDuration(duration)]);
+        // Calculate time for home and office
+        String homeTime = '';
+        String officeTime = '';
+
+        if (entry.workLocation == 'home') {
+          homeTime = entry.formattedDuration;
+        } else if (entry.workLocation == 'office') {
+          officeTime = entry.formattedDuration;
+        }
+
+        csvData.add([
+          taskDate, 
+          taskName, 
+          location, 
+          entry.formattedDuration,
+          homeTime,
+          officeTime
+        ]);
+      }
+
+      // Add a blank row
+      csvData.add(['', '', '', '', '', '']);
+
+      // Add summary by task with location breakdown
+      csvData.add(['Summary by Task', '', '', '', '', '']);
+      csvData.add(['Task', 'Location', 'Duration (HH:MM:SS)', 'Time Homeoffice', 'Time Office', '']);
+
+      final taskLocationSummary = summaryData['taskLocationSummary'] as Map<int, Map<String, Duration>>;
+
+      taskSummary.forEach((taskId, totalDuration) {
+        final taskName = taskNames[taskId] ?? 'Unknown Task';
+        // Get home and office durations for this task
+        final locationMap = taskLocationSummary[taskId]!;
+        final homeDuration = locationMap['home'] ?? Duration.zero;
+        final officeDuration = locationMap['office'] ?? Duration.zero;
+
+        // Add the task with its total duration
+        csvData.add([
+          taskName, 
+          'Total', 
+          _formatDuration(totalDuration), 
+          _formatDuration(homeDuration),
+          _formatDuration(officeDuration),
+          ''
+        ]);
+
+        // Add location breakdown for this task
+        locationMap.forEach((location, duration) {
+          final displayLocation = location.capitalize();
+          String homeTime = '';
+          String officeTime = '';
+
+          if (location == 'home') {
+            homeTime = _formatDuration(duration);
+          } else if (location == 'office') {
+            officeTime = _formatDuration(duration);
+          }
+
+          csvData.add([
+            '', 
+            displayLocation, 
+            _formatDuration(duration), 
+            homeTime,
+            officeTime,
+            ''
+          ]);
+        });
+
+        // Add a blank row after each task
+        csvData.add(['', '', '', '', '', '']);
+      });
+
+      // Add summary by location
+      csvData.add(['Summary by Location', '', '', '', '', '']);
+      csvData.add(['Location', 'Duration (HH:MM:SS)', '', 'Time Homeoffice', 'Time Office', '']);
+
+      locationSummary.forEach((location, duration) {
+        final displayLocation = location.capitalize();
+        String homeTime = '';
+        String officeTime = '';
+
+        if (location == 'home') {
+          homeTime = _formatDuration(duration);
+        } else if (location == 'office') {
+          officeTime = _formatDuration(duration);
+        }
+
+        csvData.add([
+          displayLocation, 
+          _formatDuration(duration), 
+          '', 
+          homeTime, 
+          officeTime, 
+          ''
+        ]);
       });
 
       // Save CSV file

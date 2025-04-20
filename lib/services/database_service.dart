@@ -26,7 +26,7 @@ class DatabaseService {
     final path = join(documentsDirectory.path, 'trackmytasks.db');
     return await openDatabase(
       path,
-      version: 2, // Increment version to trigger migration
+      version: 3, // Increment version to trigger migration
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -43,6 +43,18 @@ class DatabaseService {
       if (!columnNames.contains('taskName')) {
         // Add taskName column to time_entries table
         await db.execute('ALTER TABLE time_entries ADD COLUMN taskName TEXT');
+      }
+    }
+
+    if (oldVersion < 3) {
+      // Check if workLocation column exists in time_entries table
+      final result = await db.rawQuery("PRAGMA table_info(time_entries)");
+      final columnNames =
+          result.map((column) => column['name'] as String).toList();
+
+      if (!columnNames.contains('workLocation')) {
+        // Add workLocation column to time_entries table
+        await db.execute('ALTER TABLE time_entries ADD COLUMN workLocation TEXT');
       }
     }
   }
@@ -67,6 +79,7 @@ class DatabaseService {
         startTime TEXT NOT NULL,
         endTime TEXT,
         taskName TEXT,
+        workLocation TEXT,
         FOREIGN KEY (taskId) REFERENCES tasks (id) ON DELETE CASCADE
       )
     ''');
@@ -80,7 +93,10 @@ class DatabaseService {
 
   Future<List<Task>> getTasks() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('tasks');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tasks',
+      orderBy: 'createdAt DESC', // Order by creation date, newest first
+    );
     return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
   }
 
