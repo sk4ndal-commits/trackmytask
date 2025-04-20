@@ -143,11 +143,11 @@ class _AppContainerState extends State<AppContainer> with WindowListener {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.list),
+            icon: Icon(Icons.task),
             label: 'Tasks',
           ),
           BottomNavigationBarItem(
