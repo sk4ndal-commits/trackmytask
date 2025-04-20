@@ -149,7 +149,11 @@ class HomeScreen extends StatelessWidget {
 
     return ElevatedButton.icon(
       onPressed: () => _showTaskSelectionDialog(context, tasks),
-      icon: const Icon(Icons.play_arrow),
+      icon: Icon(
+        Icons.play_arrow,
+        // Ensure the arrow has a contrasting color to the background
+        color: Theme.of(context).colorScheme.onPrimary,
+      ),
       label: const Text('Start Tracking'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -372,7 +376,11 @@ class HomeScreen extends StatelessWidget {
               )
             : null,
         trailing: IconButton(
-          icon: const Icon(Icons.play_arrow),
+          icon: Icon(
+            Icons.play_arrow,
+            // Ensure the arrow has a contrasting color
+            color: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () => _showWorkLocationDialog(context, task),
           tooltip: 'Start tracking',
         ),

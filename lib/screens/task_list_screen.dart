@@ -79,15 +79,11 @@ class TaskListScreen extends StatelessWidget {
                           isActive ? Icons.stop : Icons.play_arrow,
                           color: isActive
                               ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.primary,
+                              : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
                         ),
-                        onPressed: () {
-                          if (isActive) {
-                            taskService.stopTracking();
-                          } else {
-                            taskService.startTracking(task);
-                          }
-                        },
+                        onPressed: isActive 
+                          ? () => taskService.stopTracking()
+                          : null, // Disable starting tasks from task list screen
                       ),
                       // Edit button
                       IconButton(
@@ -102,14 +98,9 @@ class TaskListScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  onTap: () {
-                    // Toggle tracking when tapping on the task
-                    if (isActive) {
-                      taskService.stopTracking();
-                    } else {
-                      taskService.startTracking(task);
-                    }
-                  },
+                  onTap: isActive 
+                    ? () => taskService.stopTracking()
+                    : null, // Disable starting tasks from task list screen
                 ),
               );
             },
