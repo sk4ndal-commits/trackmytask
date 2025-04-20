@@ -48,6 +48,10 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
 
+  # Export
+  excel: ^2.1.0
+  csv: ^5.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
