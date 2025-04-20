@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -7,11 +8,13 @@ import 'package:trackmytasks/models/time_entry.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
+
   static DatabaseService get instance => _instance;
 
   DatabaseService._internal();
 
   static Database? _database;
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -29,11 +32,13 @@ class DatabaseService {
     );
   }
 
-  Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
+  Future<void> _upgradeDatabase(
+      Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       // Check if taskName column exists in time_entries table
       final result = await db.rawQuery("PRAGMA table_info(time_entries)");
-      final columnNames = result.map((column) => column['name'] as String).toList();
+      final columnNames =
+          result.map((column) => column['name'] as String).toList();
 
       if (!columnNames.contains('taskName')) {
         // Add taskName column to time_entries table
@@ -195,8 +200,8 @@ class DatabaseService {
     final tasks = await getTasks();
     final taskMap = {for (var task in tasks) task.id: task};
 
-    return entries.map((entry) => 
-      entry.copyWith(task: taskMap[entry.taskId])
-    ).toList();
+    return entries
+        .map((entry) => entry.copyWith(task: taskMap[entry.taskId]))
+        .toList();
   }
 }

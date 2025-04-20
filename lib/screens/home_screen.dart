@@ -259,7 +259,8 @@ class HomeScreen extends StatelessWidget {
       BuildContext context, TaskService taskService) {
     // Extract all time entries and tasks
     final tasks = taskService.tasks;
-    final timeEntries = taskService.timeEntries; // Assuming TaskService provides this
+    final timeEntries =
+        taskService.timeEntries; // Assuming TaskService provides this
 
     // Map tasks to their most recent tracking start time
     final Map<int, DateTime> taskIdToLastStartTime = {};
@@ -278,8 +279,8 @@ class HomeScreen extends StatelessWidget {
         .toList();
 
     // Sort tasks by their most recent start time (descending)
-    recentTasks.sort((a, b) => taskIdToLastStartTime[b.id]!
-        .compareTo(taskIdToLastStartTime[a.id]!));
+    recentTasks.sort((a, b) =>
+        taskIdToLastStartTime[b.id]!.compareTo(taskIdToLastStartTime[a.id]!));
 
     // Take the top 3 recent tasks
     final topRecentTasks = recentTasks.take(3).toList();
@@ -306,17 +307,18 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentTaskItem(BuildContext context, Task task, TaskService taskService) {
+  Widget _buildRecentTaskItem(
+      BuildContext context, Task task, TaskService taskService) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         title: Text(task.name),
         subtitle: task.description != null && task.description!.isNotEmpty
             ? Text(
-          task.description!,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        )
+                task.description!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
             : null,
         trailing: IconButton(
           icon: const Icon(Icons.play_arrow),

@@ -1,13 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:window_manager/window_manager.dart';
-import 'package:trackmytasks/services/task_service.dart';
-import 'package:trackmytasks/services/theme_service.dart';
+import 'package:trackmytasks/screens/daily_summary_screen.dart';
 import 'package:trackmytasks/screens/home_screen.dart';
 import 'package:trackmytasks/screens/task_list_screen.dart';
-import 'package:trackmytasks/screens/daily_summary_screen.dart';
+import 'package:trackmytasks/services/task_service.dart';
+import 'package:trackmytasks/services/theme_service.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,12 +108,6 @@ class _AppContainerState extends State<AppContainer> with WindowListener {
     super.dispose();
   }
 
-  void _showWindow() {
-    windowManager.show();
-    windowManager.focus();
-  }
-
-
   @override
   void onWindowClose() async {
     // Hide the window instead of closing it
@@ -127,8 +122,11 @@ class _AppContainerState extends State<AppContainer> with WindowListener {
       appBar: AppBar(
         actions: [
           IconButton(
-            icon: Icon(themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            tooltip: themeService.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+            icon: Icon(
+                themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            tooltip: themeService.isDarkMode
+                ? 'Switch to light mode'
+                : 'Switch to dark mode',
             onPressed: () {
               themeService.toggleTheme();
             },

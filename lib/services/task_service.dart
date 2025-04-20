@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:trackmytasks/models/task.dart';
 import 'package:trackmytasks/models/time_entry.dart';
@@ -15,9 +16,13 @@ class TaskService extends ChangeNotifier {
 
   // Getters
   List<Task> get tasks => _tasks;
+
   List<TimeEntry> get timeEntries => _timeEntries;
+
   TimeEntry? get activeTimeEntry => _activeTimeEntry;
+
   Task? get activeTask => _activeTask;
+
   bool get isTracking => _activeTimeEntry != null;
 
   // Timer for UI updates
