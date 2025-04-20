@@ -1,14 +1,15 @@
 # Track My Tasks
 
-A Flutter-based desktop time tracking assistant that runs silently in the background with a system tray icon.
+A Flutter-based desktop time tracking application for efficiently managing and tracking time spent on various tasks.
 
 ## Features
 
 - **Task Management**: Create, edit, and delete tasks
 - **Time Tracking**: Start and stop timers for tasks
-- **System Tray Integration**: Access the app from the system tray
+- **Work Location Tracking**: Record whether you're working from home or office
 - **Daily Summary**: View a summary of all tracked tasks with their durations
-- **Background Operation**: App runs silently in the background
+- **Data Export**: Export your time tracking data as CSV
+- **Light/Dark Theme**: Switch between light and dark mode
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 
 ## Getting Started
@@ -34,30 +35,32 @@ A Flutter-based desktop time tracking assistant that runs silently in the backgr
 ### Tracking Time
 
 1. Start tracking time by clicking the "Start Tracking" button and selecting a task
-2. Stop tracking by clicking the "Stop Tracking" button
-3. View your daily summary to see how much time you've spent on each task
+2. Choose your work location (home or office)
+3. Stop tracking by clicking the "Stop Tracking" button
+4. View your daily summary to see how much time you've spent on each task
 
-### System Tray
+### Daily Summary
 
-- The app runs in the system tray for easy access
-- Right-click the tray icon to see options:
-  - Start/stop tracking
-  - Open the main app window
-  - View daily summary
-  - Exit the application
+1. Navigate to the Summary tab to view your daily time tracking data
+2. See a breakdown of time spent on each task
+3. View time distribution by work location (home vs. office)
+4. Export your data as CSV for further analysis
 
 ## Architecture
 
 - **Models**: Task and TimeEntry classes for data representation
-- **Services**: Database, Task, and SystemTray services for business logic
+- **Services**: 
+  - DatabaseService: SQLite database operations
+  - TaskService: Business logic for task and time entry management
+  - ThemeService: Light/dark theme management
 - **UI**: Home, TaskList, and DailySummary screens for user interaction
 
 ## Dependencies
 
 - sqflite: SQLite database integration
+- sqflite_common_ffi: SQLite for desktop platforms
 - path_provider: File system access
-- tray_manager: System tray functionality
 - window_manager: Desktop window management
 - intl: Date formatting
 - provider: State management
-# trackmytask
+- excel & csv: Data export functionality
