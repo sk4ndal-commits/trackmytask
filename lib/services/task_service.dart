@@ -32,6 +32,7 @@ class TaskService extends ChangeNotifier {
   Future<void> _init() async {
     await _loadTasks();
     await _loadActiveTimeEntry();
+    await _loadTimeEntries(); // Load all time entries
 
     // Start a timer to update the UI every second when tracking
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -50,6 +51,12 @@ class TaskService extends ChangeNotifier {
   // Load all tasks from the database
   Future<void> _loadTasks() async {
     _tasks = await _db.getTasks();
+    notifyListeners();
+  }
+
+  // Load all time entries from the database
+  Future<void> _loadTimeEntries() async {
+    _timeEntries = await _db.getTimeEntries(); // Fetch from database
     notifyListeners();
   }
 
@@ -116,6 +123,7 @@ class TaskService extends ChangeNotifier {
 
     final id = await _db.insertTimeEntry(timeEntry);
     _activeTimeEntry = timeEntry.copyWith(id: id);
+    _timeEntries.add(_activeTimeEntry!); // Add the new entry to the list
     _activeTask = updatedTask;
 
     notifyListeners();
@@ -127,6 +135,13 @@ class TaskService extends ChangeNotifier {
       // Update the time entry with end time
       final stoppedEntry = _activeTimeEntry!.stop();
       await _db.updateTimeEntry(stoppedEntry);
+
+      // Update the local list of time entries
+      final index =
+          _timeEntries.indexWhere((entry) => entry.id == stoppedEntry.id);
+      if (index != -1) {
+        _timeEntries[index] = stoppedEntry;
+      }
 
       // Set the task as inactive
       if (_activeTask != null) {
@@ -182,8 +197,8 @@ class TaskService extends ChangeNotifier {
 
     // Calculate total duration
     final totalDuration = taskSummary.values.fold(
-      Duration.zero, 
-      (total, duration) => total + duration
+      Duration.zero,
+      (total, duration) => total + duration,
     );
 
     return {

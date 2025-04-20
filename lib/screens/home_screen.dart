@@ -39,9 +39,11 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         if (isTracking && activeTask != null)
-                          _buildActiveTaskInfo(context, activeTask, activeTimeEntry!)
+                          _buildActiveTaskInfo(
+                              context, activeTask, activeTimeEntry!)
                         else
-                          const Text('No active task. Start tracking to begin.'),
+                          const Text(
+                              'No active task. Start tracking to begin.'),
                       ],
                     ),
                   ),
@@ -71,25 +73,11 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/tasks');
-                  },
-                  icon: const Icon(Icons.list),
-                  label: const Text('Manage Tasks'),
-                ),
-
-                const SizedBox(height: 8),
-
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/summary');
-                  },
-                  icon: const Icon(Icons.summarize),
-                  label: const Text('View Daily Summary'),
-                ),
-
-                const Spacer(),
+                // Recent Tasks (scrollable)
+                if (!isTracking && taskService.tasks.isNotEmpty)
+                  Expanded(
+                    child: _buildScrollableRecentTasks(context, taskService),
+                  ),
 
                 // App info
                 Center(
@@ -114,13 +102,15 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveTaskInfo(BuildContext context, Task task, TimeEntry timeEntry) {
+  Widget _buildActiveTaskInfo(
+      BuildContext context, Task task, TimeEntry timeEntry) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.play_circle, color: Theme.of(context).colorScheme.primary),
+            Icon(Icons.play_circle,
+                color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -141,7 +131,8 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Started at: ${_formatTime(timeEntry.startTime)}',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style:
+              TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         Text(
@@ -155,7 +146,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStartTrackingButton(BuildContext context, TaskService taskService) {
+  Widget _buildStartTrackingButton(
+      BuildContext context, TaskService taskService) {
     final tasks = taskService.tasks;
 
     if (tasks.isEmpty) {
@@ -192,10 +184,12 @@ class HomeScreen extends StatelessWidget {
                 final task = tasks[index];
                 return ListTile(
                   title: Text(task.name),
-                  subtitle: task.description != null ? Text(task.description!) : null,
+                  subtitle:
+                      task.description != null ? Text(task.description!) : null,
                   onTap: () {
                     Navigator.pop(context);
-                    Provider.of<TaskService>(context, listen: false).startTracking(task);
+                    Provider.of<TaskService>(context, listen: false)
+                        .startTracking(task);
                   },
                 );
               },
@@ -270,5 +264,78 @@ class HomeScreen extends StatelessWidget {
 
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildScrollableRecentTasks(
+      BuildContext context, TaskService taskService) {
+    // Extract all time entries and tasks
+    final tasks = taskService.tasks;
+    final timeEntries = taskService.timeEntries; // Assuming TaskService provides this
+
+    // Map tasks to their most recent tracking start time
+    final Map<int, DateTime> taskIdToLastStartTime = {};
+
+    for (var entry in timeEntries) {
+      final taskId = entry.taskId;
+      if (!taskIdToLastStartTime.containsKey(taskId) ||
+          entry.startTime.isAfter(taskIdToLastStartTime[taskId]!)) {
+        taskIdToLastStartTime[taskId] = entry.startTime;
+      }
+    }
+
+    // Extract tasks with their most recent start time
+    final recentTasks = tasks
+        .where((task) => taskIdToLastStartTime.containsKey(task.id))
+        .toList();
+
+    // Sort tasks by their most recent start time (descending)
+    recentTasks.sort((a, b) => taskIdToLastStartTime[b.id]!
+        .compareTo(taskIdToLastStartTime[a.id]!));
+
+    // Take the top 3 recent tasks
+    final topRecentTasks = recentTasks.take(3).toList();
+
+    // Build the UI
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recent Tasks',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.builder(
+            itemCount: topRecentTasks.length,
+            itemBuilder: (context, index) {
+              final task = topRecentTasks[index];
+              return _buildRecentTaskItem(context, task, taskService);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentTaskItem(BuildContext context, Task task, TaskService taskService) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(task.name),
+        subtitle: task.description != null && task.description!.isNotEmpty
+            ? Text(
+          task.description!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        )
+            : null,
+        trailing: IconButton(
+          icon: const Icon(Icons.play_arrow),
+          onPressed: () => taskService.startTracking(task),
+          tooltip: 'Start tracking',
+        ),
+        onTap: () => taskService.startTracking(task),
+      ),
+    );
   }
 }
