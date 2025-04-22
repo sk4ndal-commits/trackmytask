@@ -122,9 +122,6 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
         break;
       case 'monthly':
         final startOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
-        final endOfMonth = (_selectedDate.month < 12)
-            ? DateTime(_selectedDate.year, _selectedDate.month + 1, 0)
-            : DateTime(_selectedDate.year + 1, 1, 0);
         dateText = DateFormat.yMMMM().format(_selectedDate);
         // For months, we need to handle variable durations
         backwardDuration = Duration(days: startOfMonth.day);
