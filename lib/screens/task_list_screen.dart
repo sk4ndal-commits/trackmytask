@@ -73,18 +73,6 @@ class TaskListScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Start/Stop tracking button
-                      IconButton(
-                        icon: Icon(
-                          isActive ? Icons.stop : Icons.play_arrow,
-                          color: isActive
-                              ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        onPressed: isActive 
-                          ? () => taskService.stopTracking()
-                          : null, // Disable starting tasks from task list screen
-                      ),
                       // Edit button
                       IconButton(
                         icon: const Icon(Icons.edit),
@@ -98,9 +86,7 @@ class TaskListScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  onTap: isActive 
-                    ? () => taskService.stopTracking()
-                    : null, // Disable starting tasks from task list screen
+                  onTap: null, // Disable starting/stopping tasks from task list screen
                 ),
               );
             },
