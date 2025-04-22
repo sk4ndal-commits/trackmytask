@@ -24,6 +24,7 @@ class DailySummaryScreen extends StatefulWidget {
 
 class _DailySummaryScreenState extends State<DailySummaryScreen> {
   DateTime _selectedDate = DateTime.now();
+  String _reportType = 'daily'; // 'daily', 'weekly', or 'monthly'
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +40,47 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
   }
 
   AppBar buildAppBar(BuildContext context) {
+    String title;
+    switch (_reportType) {
+      case 'weekly':
+        title = 'Weekly Summary';
+        break;
+      case 'monthly':
+        title = 'Monthly Summary';
+        break;
+      case 'daily':
+      default:
+        title = 'Daily Summary';
+    }
+
     return AppBar(
-      title: const Text('Daily Summary'),
+      title: Text(title),
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       actions: [
+        // Report type selector
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.view_agenda),
+          tooltip: 'Report Type',
+          onSelected: (value) {
+            setState(() {
+              _reportType = value;
+            });
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'daily',
+              child: Text('Daily Report'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'weekly',
+              child: Text('Weekly Report'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'monthly',
+              child: Text('Monthly Report'),
+            ),
+          ],
+        ),
         IconButton(
           icon: const Icon(Icons.calendar_today),
           onPressed: () => _selectDate(context),
@@ -64,6 +102,41 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
   }
 
   Padding buildDateSelector(BuildContext context) {
+    String dateText;
+    Duration backwardDuration;
+    Duration forwardDuration;
+
+    switch (_reportType) {
+      case 'weekly':
+        // Find the start of the week (Monday)
+        final startOfWeek = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day - _selectedDate.weekday + 1,
+        );
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        dateText =
+            '${DateFormat.MMMd().format(startOfWeek)} - ${DateFormat.MMMd().format(endOfWeek)}, ${DateFormat.y().format(_selectedDate)}';
+        backwardDuration = const Duration(days: 7);
+        forwardDuration = const Duration(days: 7);
+        break;
+      case 'monthly':
+        final startOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
+        final endOfMonth = (_selectedDate.month < 12)
+            ? DateTime(_selectedDate.year, _selectedDate.month + 1, 0)
+            : DateTime(_selectedDate.year + 1, 1, 0);
+        dateText = DateFormat.yMMMM().format(_selectedDate);
+        // For months, we need to handle variable durations
+        backwardDuration = Duration(days: startOfMonth.day);
+        forwardDuration = Duration(days: 1);
+        break;
+      case 'daily':
+      default:
+        dateText = DateFormat.yMMMMd().format(_selectedDate);
+        backwardDuration = const Duration(days: 1);
+        forwardDuration = const Duration(days: 1);
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -73,21 +146,66 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () {
               setState(() {
-                _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                if (_reportType == 'monthly') {
+                  // For months, go to previous month
+                  if (_selectedDate.month == 1) {
+                    _selectedDate = DateTime(_selectedDate.year - 1, 12, 1);
+                  } else {
+                    _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+                  }
+                } else {
+                  _selectedDate = _selectedDate.subtract(backwardDuration);
+                }
               });
             },
           ),
           Text(
-            DateFormat.yMMMMd().format(_selectedDate),
+            dateText,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
             onPressed: () {
-              if (_selectedDate.isBefore(DateTime.now())) {
-                setState(() {
-                  _selectedDate = _selectedDate.add(const Duration(days: 1));
-                });
+              final now = DateTime.now();
+              bool canGoForward = true;
+
+              if (_reportType == 'monthly') {
+                // For months, check if we're already in the current month
+                canGoForward = _selectedDate.year < now.year ||
+                    (_selectedDate.year == now.year && _selectedDate.month < now.month);
+
+                if (canGoForward) {
+                  setState(() {
+                    if (_selectedDate.month == 12) {
+                      _selectedDate = DateTime(_selectedDate.year + 1, 1, 1);
+                    } else {
+                      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 1);
+                    }
+                  });
+                }
+              } else if (_reportType == 'weekly') {
+                // For weeks, check if the end of the next week is in the future
+                final startOfNextWeek = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month,
+                  _selectedDate.day - _selectedDate.weekday + 8,
+                );
+                canGoForward = startOfNextWeek.isBefore(now);
+
+                if (canGoForward) {
+                  setState(() {
+                    _selectedDate = _selectedDate.add(forwardDuration);
+                  });
+                }
+              } else {
+                // For days, check if the next day is in the future
+                canGoForward = _selectedDate.add(forwardDuration).isBefore(now);
+
+                if (canGoForward) {
+                  setState(() {
+                    _selectedDate = _selectedDate.add(forwardDuration);
+                  });
+                }
               }
             },
           ),
@@ -97,9 +215,21 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
   }
 
   Widget buildSummaryContent(BuildContext context) {
+    Future<Map<String, dynamic>> getSummaryData() {
+      final taskService = Provider.of<TaskService>(context, listen: false);
+      switch (_reportType) {
+        case 'weekly':
+          return taskService.getWeeklySummary(_selectedDate);
+        case 'monthly':
+          return taskService.getMonthlySummary(_selectedDate);
+        case 'daily':
+        default:
+          return taskService.getDailySummary(_selectedDate);
+      }
+    }
+
     return FutureBuilder<Map<String, dynamic>>(
-      future: Provider.of<TaskService>(context, listen: false)
-          .getDailySummary(_selectedDate),
+      future: getSummaryData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -153,6 +283,8 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
     final taskSummary = summaryData['taskSummary'] as Map<int, Duration>;
     final taskNames = summaryData['taskNames'] as Map<int, String>;
     final totalDuration = summaryData['totalDuration'] as Duration;
+    final categorySummary = summaryData['categorySummary'] as Map<String, Duration>;
+    final taskCategories = summaryData['taskCategories'] as Map<int, String>? ?? {};
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -160,6 +292,10 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           buildTotalTimeCard(context, totalDuration),
+          const SizedBox(height: 16),
+          Text('Time by Category', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          buildCategorySummaryList(context, categorySummary),
           const SizedBox(height: 16),
           Text('Time by Task', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
@@ -169,7 +305,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   buildTaskSummaryList(context, entries, taskSummary, taskNames,
-                      summaryData['taskLocationSummary']),
+                      summaryData['taskLocationSummary'], taskCategories),
                   const SizedBox(height: 16),
                   Text('Detailed Time Entries',
                       style: Theme.of(context).textTheme.titleLarge),
@@ -207,29 +343,72 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
     );
   }
 
+  Widget buildCategorySummaryList(
+      BuildContext context, Map<String, Duration> categorySummary) {
+    // Sort categories by duration (descending)
+    final sortedCategories = categorySummary.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final entry = sortedCategories[index];
+        final category = entry.key;
+        final duration = entry.value;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Icon(
+              Icons.category,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            title: Text(category),
+            trailing: Text(
+              _formatDuration(duration),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget buildTaskSummaryList(
       BuildContext context,
       List<TimeEntry> entries,
       Map<int, Duration> taskSummary,
       Map<int, String> taskNames,
-      Map<int, Map<String, Duration>> taskLocationSummary) {
+      Map<int, Map<String, Duration>> taskLocationSummary,
+      [Map<int, String>? taskCategories]) {
+    // Sort tasks by duration (descending)
+    final sortedTasks = taskSummary.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: taskSummary.length,
+      itemCount: sortedTasks.length,
       itemBuilder: (context, index) {
-        final taskId = taskSummary.keys.elementAt(index);
-        final duration = taskSummary[taskId]!;
+        final entry = sortedTasks[index];
+        final taskId = entry.key;
+        final duration = entry.value;
         final taskName = taskNames[taskId] ?? 'Unknown Task';
+        final category = taskCategories?[taskId];
         final locationMap = taskLocationSummary[taskId] ?? {};
 
-        return buildTaskCard(context, taskName, duration, locationMap);
+        return buildTaskCard(context, taskName, duration, locationMap, category);
       },
     );
   }
 
   Card buildTaskCard(BuildContext context, String taskName, Duration duration,
-      Map<String, Duration> locationMap) {
+      Map<String, Duration> locationMap, [String? category]) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -237,7 +416,26 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
           ListTile(
             leading: Icon(Icons.task_alt,
                 color: Theme.of(context).colorScheme.secondary),
-            title: Text(taskName),
+            title: Row(
+              children: [
+                Expanded(child: Text(taskName)),
+                if (category != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      category,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             trailing: Text(
               _formatDuration(duration),
               style: const TextStyle(
@@ -342,8 +540,21 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
   }
 
   Future<void> handleExport(BuildContext context, String value) async {
-    final summaryData = await Provider.of<TaskService>(context, listen: false)
-        .getDailySummary(_selectedDate);
+    // Get the appropriate summary data based on report type
+    final taskService = Provider.of<TaskService>(context, listen: false);
+    Map<String, dynamic> summaryData;
+
+    switch (_reportType) {
+      case 'weekly':
+        summaryData = await taskService.getWeeklySummary(_selectedDate);
+        break;
+      case 'monthly':
+        summaryData = await taskService.getMonthlySummary(_selectedDate);
+        break;
+      case 'daily':
+      default:
+        summaryData = await taskService.getDailySummary(_selectedDate);
+    }
 
     if (summaryData['taskSummary'].isEmpty && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -353,7 +564,26 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
     }
 
     if (value == 'csv' && context.mounted) {
-      await _showPathInputDialog(context, 'Export Summary as CSV', 'csv',
+      String title;
+      switch (_reportType) {
+        case 'weekly':
+          final startOfWeek = DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day - _selectedDate.weekday + 1,
+          );
+          final endOfWeek = startOfWeek.add(const Duration(days: 6));
+          title = 'Export Weekly Summary (${DateFormat.MMMd().format(startOfWeek)} - ${DateFormat.MMMd().format(endOfWeek)})';
+          break;
+        case 'monthly':
+          title = 'Export Monthly Summary (${DateFormat.yMMMM().format(_selectedDate)})';
+          break;
+        case 'daily':
+        default:
+          title = 'Export Daily Summary (${DateFormat.yMMMd().format(_selectedDate)})';
+      }
+
+      await _showPathInputDialog(context, title, 'csv',
           (filePath) => _exportToCsv(summaryData, filePath));
     }
   }

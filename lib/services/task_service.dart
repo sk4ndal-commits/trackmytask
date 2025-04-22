@@ -14,6 +14,20 @@ class TaskService extends ChangeNotifier {
   TimeEntry? _activeTimeEntry;
   Task? _activeTask;
 
+  // Predefined categories
+  final List<String> _predefinedCategories = [
+    'Work',
+    'Personal',
+    'Study',
+    'Meeting',
+    'Development',
+    'Design',
+    'Research',
+    'Planning',
+    'Documentation',
+    'Other'
+  ];
+
   // Getters
   List<Task> get tasks => _tasks;
 
@@ -24,6 +38,26 @@ class TaskService extends ChangeNotifier {
   Task? get activeTask => _activeTask;
 
   bool get isTracking => _activeTimeEntry != null;
+
+  // Get predefined categories
+  List<String> get predefinedCategories => _predefinedCategories;
+
+  // Get all unique categories currently in use
+  List<String> get allCategories {
+    final Set<String> categories = {};
+
+    // Add all predefined categories
+    categories.addAll(_predefinedCategories);
+
+    // Add categories from existing tasks
+    for (final task in _tasks) {
+      if (task.category != null && task.category!.isNotEmpty) {
+        categories.add(task.category!);
+      }
+    }
+
+    return categories.toList()..sort();
+  }
 
   // Timer for UI updates
   Timer? _timer;
@@ -77,10 +111,11 @@ class TaskService extends ChangeNotifier {
   }
 
   // Create a new task
-  Future<Task> createTask(String name, {String? description}) async {
+  Future<Task> createTask(String name, {String? description, String? category}) async {
     final task = Task(
       name: name,
       description: description,
+      category: category,
     );
 
     final id = await _db.insertTask(task);
@@ -167,10 +202,8 @@ class TaskService extends ChangeNotifier {
     return await _db.getTimeEntriesForDay(date);
   }
 
-  // Get daily summary
-  Future<Map<String, dynamic>> getDailySummary(DateTime date) async {
-    final entries = await getTimeEntriesForDay(date);
-
+  // Helper method to process time entries and generate summary data
+  Map<String, dynamic> _processSummaryData(List<TimeEntry> entries) {
     // Group entries by task
     final taskSummary = <int, Duration>{};
     for (final entry in entries) {
@@ -217,13 +250,17 @@ class TaskService extends ChangeNotifier {
       }
     }
 
-    // Get task names
+    // Get task names and categories
     final taskNames = <int, String>{};
+    final taskCategories = <int, String>{};
 
-    // First try to get names from existing tasks
+    // First try to get names and categories from existing tasks
     for (final task in _tasks) {
       if (task.id != null && taskSummary.containsKey(task.id)) {
         taskNames[task.id!] = task.name;
+        if (task.category != null && task.category!.isNotEmpty) {
+          taskCategories[task.id!] = task.category!;
+        }
       }
     }
 
@@ -231,6 +268,20 @@ class TaskService extends ChangeNotifier {
     for (final entry in entries) {
       if (!taskNames.containsKey(entry.taskId) && entry.taskName != null) {
         taskNames[entry.taskId] = entry.taskName!;
+      }
+    }
+
+    // Group entries by category
+    final categorySummary = <String, Duration>{};
+    for (final entry in entries) {
+      final taskId = entry.taskId;
+      final duration = entry.duration;
+      final category = taskCategories[taskId] ?? 'Uncategorized';
+
+      if (categorySummary.containsKey(category)) {
+        categorySummary[category] = categorySummary[category]! + duration;
+      } else {
+        categorySummary[category] = duration;
       }
     }
 
@@ -244,9 +295,29 @@ class TaskService extends ChangeNotifier {
       'entries': entries,
       'taskSummary': taskSummary,
       'taskNames': taskNames,
+      'taskCategories': taskCategories,
       'totalDuration': totalDuration,
       'locationSummary': locationSummary,
       'taskLocationSummary': taskLocationSummary,
+      'categorySummary': categorySummary,
     };
+  }
+
+  // Get daily summary
+  Future<Map<String, dynamic>> getDailySummary(DateTime date) async {
+    final entries = await _db.getTimeEntriesForDay(date);
+    return _processSummaryData(entries);
+  }
+
+  // Get weekly summary
+  Future<Map<String, dynamic>> getWeeklySummary(DateTime date) async {
+    final entries = await _db.getTimeEntriesForWeek(date);
+    return _processSummaryData(entries);
+  }
+
+  // Get monthly summary
+  Future<Map<String, dynamic>> getMonthlySummary(DateTime date) async {
+    final entries = await _db.getTimeEntriesForMonth(date);
+    return _processSummaryData(entries);
   }
 }

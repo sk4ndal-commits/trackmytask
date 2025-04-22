@@ -63,12 +63,33 @@ class TaskListScreen extends StatelessWidget {
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.secondary,
                   ),
-                  title: Text(
-                    task.name,
-                    style: TextStyle(
-                      fontWeight:
-                          isActive ? FontWeight.bold : FontWeight.normal,
-                    ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.name,
+                          style: TextStyle(
+                            fontWeight:
+                                isActive ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (task.category != null && task.category!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            task.category!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   subtitle:
                       task.description != null && task.description!.isNotEmpty
@@ -108,54 +129,84 @@ class TaskListScreen extends StatelessWidget {
   void _showAddTaskDialog(BuildContext context) {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
+    final taskService = Provider.of<TaskService>(context, listen: false);
+    String? selectedCategory;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Task'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Task Name',
-                  hintText: 'Enter task name',
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add New Task'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Task Name',
+                        hintText: 'Enter task name',
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Optional)',
+                        hintText: 'Enter task description',
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Category (Optional)'),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      hint: const Text('Select a category'),
+                      value: selectedCategory,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedCategory = newValue;
+                        });
+                      },
+                      items: taskService.predefinedCategories
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
-                autofocus: true,
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional)',
-                  hintText: 'Enter task description',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (nameController.text.trim().isNotEmpty) {
-                  Provider.of<TaskService>(context, listen: false).createTask(
-                    nameController.text.trim(),
-                    description: descriptionController.text.trim().isNotEmpty
-                        ? descriptionController.text.trim()
-                        : null,
-                  );
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty) {
+                      taskService.createTask(
+                        nameController.text.trim(),
+                        description: descriptionController.text.trim().isNotEmpty
+                            ? descriptionController.text.trim()
+                            : null,
+                        category: selectedCategory,
+                      );
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          }
         );
       },
     );
@@ -165,56 +216,92 @@ class TaskListScreen extends StatelessWidget {
     final nameController = TextEditingController(text: task.name);
     final descriptionController =
         TextEditingController(text: task.description ?? '');
+    final taskService = Provider.of<TaskService>(context, listen: false);
+    String? selectedCategory = task.category;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Task'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Task Name',
-                  hintText: 'Enter task name',
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Task'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Task Name',
+                        hintText: 'Enter task name',
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Optional)',
+                        hintText: 'Enter task description',
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Category (Optional)'),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      hint: const Text('Select a category'),
+                      value: selectedCategory,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedCategory = newValue;
+                        });
+                      },
+                      items: [
+                        // Add a "None" option to clear the category
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('None'),
+                        ),
+                        ...taskService.predefinedCategories
+                            .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ],
                 ),
-                autofocus: true,
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional)',
-                  hintText: 'Enter task description',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (nameController.text.trim().isNotEmpty) {
-                  final updatedTask = task.copyWith(
-                    name: nameController.text.trim(),
-                    description: descriptionController.text.trim().isNotEmpty
-                        ? descriptionController.text.trim()
-                        : null,
-                  );
-                  Provider.of<TaskService>(context, listen: false)
-                      .updateTask(updatedTask);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty) {
+                      final updatedTask = task.copyWith(
+                        name: nameController.text.trim(),
+                        description: descriptionController.text.trim().isNotEmpty
+                            ? descriptionController.text.trim()
+                            : null,
+                        category: selectedCategory,
+                      );
+                      taskService.updateTask(updatedTask);
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          }
         );
       },
     );

@@ -7,7 +7,7 @@ A Flutter-based desktop time tracking application for efficiently managing and t
 - **Task Management**: Create, edit, and delete tasks
 - **Time Tracking**: Start and stop timers for tasks
 - **Work Location Tracking**: Record whether you're working from home or office
-- **Daily Summary**: View a summary of all tracked tasks with their durations
+- **Time Reports**: View daily, weekly, or monthly summaries of all tracked tasks with their durations
 - **Data Export**: Export your time tracking data as CSV
 - **Light/Dark Theme**: Switch between light and dark mode
 - **Cross-Platform**: Works on Windows, macOS, and Linux
@@ -39,12 +39,14 @@ A Flutter-based desktop time tracking application for efficiently managing and t
 3. Stop tracking by clicking the "Stop Tracking" button
 4. View your daily summary to see how much time you've spent on each task
 
-### Daily Summary
+### Time Reports
 
-1. Navigate to the Summary tab to view your daily time tracking data
-2. See a breakdown of time spent on each task
-3. View time distribution by work location (home vs. office)
-4. Export your data as CSV for further analysis
+1. Navigate to the Summary tab to view your time tracking data
+2. Choose between daily, weekly, or monthly report views
+3. See a breakdown of time spent on each task
+4. View time distribution by category and work location (home vs. office)
+5. Navigate between different time periods using the arrow buttons
+6. Export your data as CSV for further analysis
 
 ## Architecture
 

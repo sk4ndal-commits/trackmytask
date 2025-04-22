@@ -26,7 +26,7 @@ class DatabaseService {
     final path = join(documentsDirectory.path, 'trackmytasks.db');
     return await openDatabase(
       path,
-      version: 3, // Increment version to trigger migration
+      version: 4, // Increment version to trigger migration
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -57,6 +57,18 @@ class DatabaseService {
         await db.execute('ALTER TABLE time_entries ADD COLUMN workLocation TEXT');
       }
     }
+
+    if (oldVersion < 4) {
+      // Check if category column exists in tasks table
+      final result = await db.rawQuery("PRAGMA table_info(tasks)");
+      final columnNames =
+          result.map((column) => column['name'] as String).toList();
+
+      if (!columnNames.contains('category')) {
+        // Add category column to tasks table
+        await db.execute('ALTER TABLE tasks ADD COLUMN category TEXT');
+      }
+    }
   }
 
   Future<void> _createDatabase(Database db, int version) async {
@@ -67,7 +79,8 @@ class DatabaseService {
         name TEXT NOT NULL,
         description TEXT,
         isActive INTEGER NOT NULL,
-        createdAt TEXT NOT NULL
+        createdAt TEXT NOT NULL,
+        category TEXT
       )
     ''');
 
@@ -198,6 +211,57 @@ class DatabaseService {
       'time_entries',
       where: 'startTime >= ? AND startTime < ?',
       whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
+    );
+
+    // Get all tasks to associate with time entries
+    final tasks = await getTasks();
+    final taskMap = {for (var task in tasks) task.id: task};
+
+    return List.generate(maps.length, (i) {
+      final entry = TimeEntry.fromMap(maps[i]);
+      return entry.copyWith(task: taskMap[entry.taskId]);
+    });
+  }
+
+  // Get time entries for a specific week
+  Future<List<TimeEntry>> getTimeEntriesForWeek(DateTime date) async {
+    final db = await database;
+    // Find the start of the week (Monday)
+    final startOfWeek = DateTime(
+      date.year,
+      date.month,
+      date.day - date.weekday + 1,
+    );
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'time_entries',
+      where: 'startTime >= ? AND startTime < ?',
+      whereArgs: [startOfWeek.toIso8601String(), endOfWeek.toIso8601String()],
+    );
+
+    // Get all tasks to associate with time entries
+    final tasks = await getTasks();
+    final taskMap = {for (var task in tasks) task.id: task};
+
+    return List.generate(maps.length, (i) {
+      final entry = TimeEntry.fromMap(maps[i]);
+      return entry.copyWith(task: taskMap[entry.taskId]);
+    });
+  }
+
+  // Get time entries for a specific month
+  Future<List<TimeEntry>> getTimeEntriesForMonth(DateTime date) async {
+    final db = await database;
+    final startOfMonth = DateTime(date.year, date.month, 1);
+    final endOfMonth = (date.month < 12)
+        ? DateTime(date.year, date.month + 1, 1)
+        : DateTime(date.year + 1, 1, 1);
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'time_entries',
+      where: 'startTime >= ? AND startTime < ?',
+      whereArgs: [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()],
     );
 
     // Get all tasks to associate with time entries
