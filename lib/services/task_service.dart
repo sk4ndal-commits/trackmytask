@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:trackmytasks/models/task.dart';
 import 'package:trackmytasks/models/time_entry.dart';
 import 'package:trackmytasks/services/database_service.dart';
+import 'package:trackmytasks/services/user_service.dart';
 
 class TaskService extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
+  final UserService _userService = UserService.instance;
 
   // State
   List<Task> _tasks = [];
@@ -53,34 +55,52 @@ class TaskService extends ChangeNotifier {
     super.dispose();
   }
 
-  // Load all tasks from the database
+  // Load tasks for the current user from the database
   Future<void> _loadTasks() async {
-    _tasks = await _db.getTasks();
+    if (_userService.currentUser != null) {
+      _tasks = await _db.getTasksForUser(_userService.currentUser!.id!);
+    } else {
+      _tasks = [];
+    }
     notifyListeners();
   }
 
-  // Load all time entries from the database
+  // Load time entries for the current user from the database
   Future<void> _loadTimeEntries() async {
-    _timeEntries = await _db.getTimeEntries(); // Fetch from database
+    if (_userService.currentUser != null) {
+      _timeEntries = await _db.getTimeEntriesForUser(_userService.currentUser!.id!);
+    } else {
+      _timeEntries = [];
+    }
     notifyListeners();
   }
 
   // Load the active time entry (if any)
   Future<void> _loadActiveTimeEntry() async {
-    _activeTimeEntry = await _db.getActiveTimeEntry();
-    if (_activeTimeEntry != null && _activeTimeEntry!.task != null) {
-      _activeTask = _activeTimeEntry!.task;
-    } else if (_activeTimeEntry != null) {
-      _activeTask = await _db.getTask(_activeTimeEntry!.taskId);
+    if (_userService.currentUser != null) {
+      _activeTimeEntry = await _db.getActiveTimeEntryForUser(_userService.currentUser!.id!);
+      if (_activeTimeEntry != null && _activeTimeEntry!.task != null) {
+        _activeTask = _activeTimeEntry!.task;
+      } else if (_activeTimeEntry != null) {
+        _activeTask = await _db.getTask(_activeTimeEntry!.taskId);
+      }
+    } else {
+      _activeTimeEntry = null;
+      _activeTask = null;
     }
     notifyListeners();
   }
 
   // Create a new task
   Future<Task> createTask(String name, {String? description}) async {
+    if (_userService.currentUser == null) {
+      throw Exception('No user is logged in');
+    }
+
     final task = Task(
       name: name,
       description: description,
+      userId: _userService.currentUser!.id,
     );
 
     final id = await _db.insertTask(task);
@@ -109,6 +129,10 @@ class TaskService extends ChangeNotifier {
 
   // Start tracking time for a task
   Future<void> startTracking(Task task, {String? workLocation}) async {
+    if (_userService.currentUser == null) {
+      throw Exception('No user is logged in');
+    }
+
     // Stop any active tracking first
     if (_activeTimeEntry != null) {
       await stopTracking();
@@ -125,6 +149,7 @@ class TaskService extends ChangeNotifier {
       task: updatedTask,
       taskName: updatedTask.name, // Store the task name directly
       workLocation: workLocation, // Store the work location
+      userId: _userService.currentUser!.id, // Associate with current user
     );
 
     final id = await _db.insertTimeEntry(timeEntry);
@@ -164,7 +189,10 @@ class TaskService extends ChangeNotifier {
 
   // Get time entries for a specific day
   Future<List<TimeEntry>> getTimeEntriesForDay(DateTime date) async {
-    return await _db.getTimeEntriesForDay(date);
+    if (_userService.currentUser == null) {
+      return [];
+    }
+    return await _db.getTimeEntriesForDayAndUser(date, _userService.currentUser!.id!);
   }
 
   // Get daily summary

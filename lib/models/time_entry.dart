@@ -8,6 +8,7 @@ class TimeEntry {
   final Task? task; // Optional reference to the associated task
   final String? taskName; // Store the task name directly
   final String? workLocation; // 'home' or 'office'
+  final int? userId; // Reference to the associated user
 
   TimeEntry({
     this.id,
@@ -17,6 +18,7 @@ class TimeEntry {
     this.task,
     this.taskName,
     this.workLocation,
+    this.userId,
   });
 
   // Calculate the duration of this time entry
@@ -47,6 +49,7 @@ class TimeEntry {
       task: task,
       taskName: map['taskName'],
       workLocation: map['workLocation'],
+      userId: map['userId'],
     );
   }
 
@@ -57,6 +60,7 @@ class TimeEntry {
       'taskId': taskId,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
+      'userId': userId,
     };
 
     // Only include taskName if it's not null and the column exists in the database
@@ -81,6 +85,7 @@ class TimeEntry {
     Task? task,
     String? taskName,
     String? workLocation,
+    int? userId,
   }) {
     return TimeEntry(
       id: id ?? this.id,
@@ -90,6 +95,7 @@ class TimeEntry {
       task: task ?? this.task,
       taskName: taskName ?? this.taskName,
       workLocation: workLocation ?? this.workLocation,
+      userId: userId ?? this.userId,
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:trackmytasks/models/task.dart';
 import 'package:trackmytasks/models/time_entry.dart';
+import 'package:trackmytasks/models/user.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -26,7 +27,7 @@ class DatabaseService {
     final path = join(documentsDirectory.path, 'trackmytasks.db');
     return await openDatabase(
       path,
-      version: 3, // Increment version to trigger migration
+      version: 5, // Increment version to trigger migration for password support
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -57,9 +58,45 @@ class DatabaseService {
         await db.execute('ALTER TABLE time_entries ADD COLUMN workLocation TEXT');
       }
     }
+
+    if (oldVersion < 4) {
+      // Create users table
+      await db.execute('''
+        CREATE TABLE users(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          profilePicture TEXT,
+          createdAt TEXT NOT NULL
+        )
+      ''');
+
+      // Add userId column to tasks table
+      await db.execute('ALTER TABLE tasks ADD COLUMN userId INTEGER');
+
+      // Add userId column to time_entries table
+      await db.execute('ALTER TABLE time_entries ADD COLUMN userId INTEGER');
+    }
+
+    if (oldVersion < 5) {
+      // Add password column to users table
+      await db.execute('ALTER TABLE users ADD COLUMN password TEXT');
+    }
   }
 
   Future<void> _createDatabase(Database db, int version) async {
+    // Create users table
+    await db.execute('''
+      CREATE TABLE users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT,
+        profilePicture TEXT,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+
     // Create tasks table
     await db.execute('''
       CREATE TABLE tasks(
@@ -67,7 +104,9 @@ class DatabaseService {
         name TEXT NOT NULL,
         description TEXT,
         isActive INTEGER NOT NULL,
-        createdAt TEXT NOT NULL
+        createdAt TEXT NOT NULL,
+        userId INTEGER,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE SET NULL
       )
     ''');
 
@@ -80,7 +119,9 @@ class DatabaseService {
         endTime TEXT,
         taskName TEXT,
         workLocation TEXT,
-        FOREIGN KEY (taskId) REFERENCES tasks (id) ON DELETE CASCADE
+        userId INTEGER,
+        FOREIGN KEY (taskId) REFERENCES tasks (id) ON DELETE CASCADE,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE SET NULL
       )
     ''');
   }
@@ -188,6 +229,23 @@ class DatabaseService {
     return TimeEntry.fromMap(maps.first, task: task);
   }
 
+  // Get active time entry for a specific user (if any)
+  Future<TimeEntry?> getActiveTimeEntryForUser(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'time_entries',
+      where: 'endTime IS NULL AND userId = ?',
+      whereArgs: [userId],
+    );
+    if (maps.isEmpty) return null;
+
+    // Get the associated task
+    final taskId = maps.first['taskId'];
+    final task = await getTask(taskId);
+
+    return TimeEntry.fromMap(maps.first, task: task);
+  }
+
   // Get time entries for a specific day
   Future<List<TimeEntry>> getTimeEntriesForDay(DateTime date) async {
     final db = await database;
@@ -219,5 +277,114 @@ class DatabaseService {
     return entries
         .map((entry) => entry.copyWith(task: taskMap[entry.taskId]))
         .toList();
+  }
+
+  // User operations
+  Future<int> insertUser(User user) async {
+    final db = await database;
+    return await db.insert('users', user.toMap());
+  }
+
+  Future<List<User>> getUsers() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      orderBy: 'name ASC', // Order by name alphabetically
+    );
+    return List.generate(maps.length, (i) => User.fromMap(maps[i]));
+  }
+
+  Future<User?> getUser(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return User.fromMap(maps.first);
+  }
+
+  Future<User?> getUserByEmail(String email) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (maps.isEmpty) return null;
+    return User.fromMap(maps.first);
+  }
+
+  Future<int> updateUser(User user) async {
+    final db = await database;
+    return await db.update(
+      'users',
+      user.toMap(),
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+  }
+
+  Future<int> deleteUser(int id) async {
+    final db = await database;
+    return await db.delete(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Get tasks for a specific user
+  Future<List<Task>> getTasksForUser(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tasks',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'createdAt DESC',
+    );
+    return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
+  }
+
+  // Get time entries for a specific user
+  Future<List<TimeEntry>> getTimeEntriesForUser(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'time_entries',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    // Get all tasks to associate with time entries
+    final tasks = await getTasks();
+    final taskMap = {for (var task in tasks) task.id: task};
+
+    return List.generate(maps.length, (i) {
+      final entry = TimeEntry.fromMap(maps[i]);
+      return entry.copyWith(task: taskMap[entry.taskId]);
+    });
+  }
+
+  // Get time entries for a specific day and user
+  Future<List<TimeEntry>> getTimeEntriesForDayAndUser(DateTime date, int userId) async {
+    final db = await database;
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'time_entries',
+      where: 'startTime >= ? AND startTime < ? AND userId = ?',
+      whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String(), userId],
+    );
+
+    // Get all tasks to associate with time entries
+    final tasks = await getTasks();
+    final taskMap = {for (var task in tasks) task.id: task};
+
+    return List.generate(maps.length, (i) {
+      final entry = TimeEntry.fromMap(maps[i]);
+      return entry.copyWith(task: taskMap[entry.taskId]);
+    });
   }
 }

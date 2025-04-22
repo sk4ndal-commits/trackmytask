@@ -4,6 +4,7 @@ class Task {
   final String? description;
   final bool isActive;
   final DateTime createdAt;
+  final int? userId;
 
   Task({
     this.id,
@@ -11,6 +12,7 @@ class Task {
     this.description,
     this.isActive = false,
     DateTime? createdAt,
+    this.userId,
   }) : createdAt = createdAt ?? DateTime.now();
 
   // Create a Task from a map (for database operations)
@@ -21,6 +23,7 @@ class Task {
       description: map['description'],
       isActive: map['isActive'] == 1,
       createdAt: DateTime.parse(map['createdAt']),
+      userId: map['userId'],
     );
   }
 
@@ -32,6 +35,7 @@ class Task {
       'description': description,
       'isActive': isActive ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
+      'userId': userId,
     };
   }
 
@@ -42,6 +46,7 @@ class Task {
     String? description,
     bool? isActive,
     DateTime? createdAt,
+    int? userId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -49,6 +54,7 @@ class Task {
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
+      userId: userId ?? this.userId,
     );
   }
 }

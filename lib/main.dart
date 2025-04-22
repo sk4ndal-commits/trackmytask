@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:trackmytasks/screens/daily_summary_screen.dart';
 import 'package:trackmytasks/screens/home_screen.dart';
+import 'package:trackmytasks/screens/login_screen.dart';
 import 'package:trackmytasks/screens/task_list_screen.dart';
 import 'package:trackmytasks/services/task_service.dart';
 import 'package:trackmytasks/services/theme_service.dart';
+import 'package:trackmytasks/services/auth_service.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
@@ -48,6 +50,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => TaskService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
+        Provider(create: (_) => AuthService.instance),
       ],
       child: Consumer<ThemeService>(
         builder: (context, themeService, child) {
@@ -64,7 +67,14 @@ class MyApp extends StatelessWidget {
               ),
               useMaterial3: true,
             ),
-            home: const AppContainer(),
+            home: Builder(
+              builder: (context) {
+                final authService = Provider.of<AuthService>(context);
+                return authService.isLoggedIn 
+                    ? const AppContainer() 
+                    : const LoginScreen();
+              },
+            ),
             routes: {
               '/tasks': (context) => const TaskListScreen(),
               '/summary': (context) => const DailySummaryScreen(),
