@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trackmytasks/models/time_entry.dart';
 import 'package:trackmytasks/services/task_service.dart';
+import 'package:trackmytasks/widgets/theme_toggle_button.dart';
 
 // Extension to capitalize the first letter of a string
 extension StringExtension on String {
@@ -57,6 +58,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
             ),
           ],
         ),
+        const ThemeToggleButton(),
       ],
     );
   }

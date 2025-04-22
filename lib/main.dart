@@ -119,20 +119,6 @@ class _AppContainerState extends State<AppContainer> with WindowListener {
     final themeService = Provider.of<ThemeService>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            icon: Icon(
-                themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            tooltip: themeService.isDarkMode
-                ? 'Switch to light mode'
-                : 'Switch to dark mode',
-            onPressed: () {
-              themeService.toggleTheme();
-            },
-          ),
-        ],
-      ),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:trackmytasks/models/task.dart';
 import 'package:trackmytasks/models/time_entry.dart';
 import 'package:trackmytasks/services/task_service.dart';
+import 'package:trackmytasks/widgets/theme_toggle_button.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -13,6 +14,9 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Track My Tasks'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: const [
+          ThemeToggleButton(),
+        ],
       ),
       body: Consumer<TaskService>(
         builder: (context, taskService, child) {

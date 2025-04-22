@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:trackmytasks/models/task.dart';
 import 'package:trackmytasks/services/task_service.dart';
+import 'package:trackmytasks/widgets/theme_toggle_button.dart';
 
 class TaskListScreen extends StatelessWidget {
   const TaskListScreen({super.key});
@@ -12,6 +13,9 @@ class TaskListScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Manage Tasks'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: const [
+          ThemeToggleButton(),
+        ],
       ),
       body: Consumer<TaskService>(
         builder: (context, taskService, child) {
