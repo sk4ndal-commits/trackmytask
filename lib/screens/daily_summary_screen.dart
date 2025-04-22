@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -380,6 +383,42 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
   Future<void> _showPathInputDialog(BuildContext context, String title,
       String extension, Function(String) onSubmit) async {
     // Path input logic remains unchanged
+    final controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: 'Enter file path',
+            hintText: '/path/to/your/file.$extension',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final filePath = controller.text.trim();
+              if (filePath.isNotEmpty && filePath.endsWith('.$extension')) {
+                Navigator.pop(dialogContext);
+                onSubmit(filePath);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please provide a valid file path')),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _exportToCsv(
@@ -387,5 +426,164 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
     String filePath,
   ) async {
     // Export logic remains unchanged
+    try {
+      // Extract data from summary
+      final taskSummary = summaryData['taskSummary'] as Map<int, Duration>;
+      final taskNames = summaryData['taskNames'] as Map<int, String>;
+      final entries = summaryData['entries'] as List<TimeEntry>;
+      final locationSummary =
+          summaryData['locationSummary'] as Map<String, Duration>;
+
+      // Prepare data for CSV
+      final List<List<dynamic>> csvData = [
+        [
+          'Date',
+          'Task',
+          'Location',
+          'Duration (HH:MM:SS)',
+          'Time Homeoffice',
+          'Time Office'
+        ] // Header row
+      ];
+
+      // Add each task with its date, name, location, and duration
+      for (final entry in entries) {
+        final taskDate = DateFormat.yMMMd().format(entry.startTime);
+        final taskName = entry.task?.name ??
+            entry.taskName ??
+            taskNames[entry.taskId] ??
+            'Unknown Task';
+        final location = entry.workLocation?.capitalize() ?? 'Unknown';
+
+        // Calculate time for home and office
+        String homeTime = '';
+        String officeTime = '';
+
+        if (entry.workLocation == 'home') {
+          homeTime = entry.formattedDuration;
+        } else if (entry.workLocation == 'office') {
+          officeTime = entry.formattedDuration;
+        }
+
+        csvData.add([
+          taskDate,
+          taskName,
+          location,
+          entry.formattedDuration,
+          homeTime,
+          officeTime
+        ]);
+      }
+
+      // Add a blank row
+      csvData.add(['', '', '', '', '', '']);
+
+      // Add summary by task with location breakdown
+      csvData.add(['Summary by Task', '', '', '', '', '']);
+      csvData.add([
+        'Task',
+        'Location',
+        'Duration (HH:MM:SS)',
+        'Time Homeoffice',
+        'Time Office',
+        ''
+      ]);
+
+      final taskLocationSummary =
+          summaryData['taskLocationSummary'] as Map<int, Map<String, Duration>>;
+
+      taskSummary.forEach((taskId, totalDuration) {
+        final taskName = taskNames[taskId] ?? 'Unknown Task';
+        // Get home and office durations for this task
+        final locationMap = taskLocationSummary[taskId]!;
+        final homeDuration = locationMap['home'] ?? Duration.zero;
+        final officeDuration = locationMap['office'] ?? Duration.zero;
+
+        // Add the task with its total duration
+        csvData.add([
+          taskName,
+          'Total',
+          _formatDuration(totalDuration),
+          _formatDuration(homeDuration),
+          _formatDuration(officeDuration),
+          ''
+        ]);
+
+        // Add location breakdown for this task
+        locationMap.forEach((location, duration) {
+          final displayLocation = location.capitalize();
+          String homeTime = '';
+          String officeTime = '';
+
+          if (location == 'home') {
+            homeTime = _formatDuration(duration);
+          } else if (location == 'office') {
+            officeTime = _formatDuration(duration);
+          }
+
+          csvData.add([
+            '',
+            displayLocation,
+            _formatDuration(duration),
+            homeTime,
+            officeTime,
+            ''
+          ]);
+        });
+
+        // Add a blank row after each task
+        csvData.add(['', '', '', '', '', '']);
+      });
+
+      // Add summary by location
+      csvData.add(['Summary by Location', '', '', '', '', '']);
+      csvData.add([
+        'Location',
+        'Duration (HH:MM:SS)',
+        '',
+        'Time Homeoffice',
+        'Time Office',
+        ''
+      ]);
+
+      locationSummary.forEach((location, duration) {
+        final displayLocation = location.capitalize();
+        String homeTime = '';
+        String officeTime = '';
+
+        if (location == 'home') {
+          homeTime = _formatDuration(duration);
+        } else if (location == 'office') {
+          officeTime = _formatDuration(duration);
+        }
+
+        csvData.add([
+          displayLocation,
+          _formatDuration(duration),
+          '',
+          homeTime,
+          officeTime,
+          ''
+        ]);
+      });
+
+      // Save CSV file
+      final file = File(filePath);
+      await file.writeAsString(const ListToCsvConverter().convert(csvData));
+
+      // Notify user of success
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported to $filePath')),
+        );
+      }
+    } catch (e) {
+      // Notify user of failure
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export CSV: $e')),
+        );
+      }
+    }
   }
 }
