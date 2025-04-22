@@ -350,7 +350,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
       return;
     }
 
-    if (value == 'csv') {
+    if (value == 'csv' && context.mounted) {
       await _showPathInputDialog(context, 'Export Summary as CSV', 'csv',
           (filePath) => _exportToCsv(summaryData, filePath));
     }
