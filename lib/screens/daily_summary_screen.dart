@@ -272,7 +272,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
                 ),
                 ...locationMap.entries.map((entry) {
                   return buildLocationRow(context, entry.key, entry.value);
-                }).toList(),
+                }),
               ],
             ),
           ),
@@ -294,7 +294,7 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
       children: [
         Icon(icon,
             size: 16,
-            color: Theme.of(context).colorScheme.secondary.withOpacity(0.7)),
+            color: Theme.of(context).colorScheme.secondary),
         const SizedBox(width: 8),
         Text(location.capitalize()),
         const Spacer(),
