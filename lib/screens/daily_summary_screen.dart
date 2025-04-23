@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:trackmytasks/models/time_entry.dart';
@@ -249,9 +250,30 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
-              children: locationMap.entries.map((entry) {
-                return buildLocationRow(context, entry.key, entry.value);
-              }).toList(),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 16),
+                      tooltip: 'Copy task name',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: taskName));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Task name copied to clipboard')),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('Copy', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+                ...locationMap.entries.map((entry) {
+                  return buildLocationRow(context, entry.key, entry.value);
+                }).toList(),
+              ],
             ),
           ),
         ],
@@ -298,12 +320,12 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
             entry.taskName ??
             taskNames[entry.taskId] ??
             'Unknown Task';
-        return buildDetailedEntryCard(entry, taskName);
+        return buildDetailedEntryCard(context, entry, taskName);
       },
     );
   }
 
-  Card buildDetailedEntryCard(TimeEntry entry, String taskName) {
+  Card buildDetailedEntryCard(BuildContext context, TimeEntry entry, String taskName) {
     final locationIcons = {
       'home': Icons.home,
       'office': Icons.business,
@@ -320,8 +342,30 @@ class _DailySummaryScreenState extends State<DailySummaryScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${_formatTime(entry.startTime)} - ${entry.endTime != null ? _formatTime(entry.endTime!) : 'In progress'}',
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 16),
+                  tooltip: 'Copy task name',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: taskName));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Task name copied to clipboard')),
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+                const Text('Copy', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+            Row(
+              children: [
+                Text(
+                  '${_formatTime(entry.startTime)} - ${entry.endTime != null ? _formatTime(entry.endTime!) : 'In progress'}',
+                ),
+              ],
             ),
             Row(
               children: [
