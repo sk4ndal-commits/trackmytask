@@ -25,3 +25,18 @@ A Flutter-based desktop time tracking application for efficiently managing and t
 - Theme handling — `lib/services/theme_service.dart` and `lib/widgets/theme_toggle_button.dart` provide light/dark theme switching.
 - Testing & linting (dev) — `flutter_test` and `flutter_lints` used during development and CI for tests and lint rules.
 
+## Dashboard
+
+![Dashboard](./assets/images/Dashboard.png)
+
+## Track Task
+
+![Track Task](./assets/images/TrackTask.png)
+
+## Create Task
+
+![Create Task](./assets/images/CreateTask.png)
+
+## Summary
+
+![Summary](./assets/images/Summary.png)
